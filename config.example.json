@@ -1,0 +1,15 @@
+
+{
+  "host": "127.0.0.1",
+  "port": 4455,
+  "password": "REMPLACER_PAR_LE_MOT_DE_PASSE_OBS",
+  "sessions": [
+    {
+      "name": "Java",
+      "days": [0, 1, 2],
+      "start": "09:00",
+      "end": "13:00",
+      "meet_url": "https://meet.google.com/REMPLACER"
+    }
+  ]
+}

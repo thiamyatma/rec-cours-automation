@@ -1,0 +1,2 @@
+obsws-python>=1.7.0
+playwright>=1.40.0

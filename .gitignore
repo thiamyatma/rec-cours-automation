@@ -1,0 +1,31 @@
+
+# Configuration personnelle et secrets
+config.json
+.env
+.env.*
+
+# Profil Google / navigateur
+profil_google_meet/
+user_data/
+chrome_profile/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Journaux et vidéos
+automation.log
+logs/
+recordings/
+*.mkv
+*.mp4
+*.mov
+*.avi
+
+# Éditeurs et système
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
