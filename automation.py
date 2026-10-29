@@ -6,9 +6,89 @@ import sys
 import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
+import subprocess
+import atexit
 
 import obsws_python as obs
 from playwright.sync_api import sync_playwright
+
+
+# ============================================================
+# TRANSCRIPTION AUTOMATIQUE
+# ============================================================
+
+_transcription_process = None
+
+
+def start_transcription_service():
+    """Lance le service de transcription en arrière-plan."""
+    global _transcription_process
+
+    script_path = BASE_DIR / "transcription.py"
+    python_path = BASE_DIR / ".venv" / "Scripts" / "python.exe"
+
+    if not script_path.exists():
+        logging.error(
+            "Script de transcription introuvable : %s",
+            script_path,
+        )
+        return
+
+    if not python_path.exists():
+        logging.error(
+            "Interpréteur Python introuvable : %s",
+            python_path,
+        )
+        return
+
+    if (
+        _transcription_process is not None
+        and _transcription_process.poll() is None
+    ):
+        logging.info("Le service de transcription tourne déjà.")
+        return
+
+    try:
+        _transcription_process = subprocess.Popen(
+            [
+                str(python_path),
+                str(script_path),
+            ],
+            cwd=str(BASE_DIR),
+            creationflags=subprocess.CREATE_NO_WINDOW,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        logging.info(
+            "Service de transcription lancé (PID %s).",
+            _transcription_process.pid,
+        )
+
+    except Exception:
+        logging.exception(
+            "Impossible de lancer le service de transcription."
+        )
+
+
+def stop_transcription_service():
+    """Arrête le service lorsque automation.py se termine."""
+    global _transcription_process
+
+    if (
+        _transcription_process is not None
+        and _transcription_process.poll() is None
+    ):
+        _transcription_process.terminate()
+
+        try:
+            _transcription_process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            _transcription_process.kill()
+
+        logging.info("Service de transcription arrêté.")
+
 
 # ============================================================
 # CONFIGURATION
@@ -642,4 +722,7 @@ def main():
 
 
 if __name__ == "__main__":
+    start_transcription_service()
+    atexit.register(stop_transcription_service)
+
     main()
