@@ -19,8 +19,8 @@ CONFIG_FILE = BASE_DIR / "config.json"
 LOG_FILE = BASE_DIR / "automation.log"
 PROFILE_DIR = BASE_DIR / "profil_google_meet"
 
-START_DATE = date(2026, 10, 30)
-END_DATE = date(2026, 11, 13)
+START_DATE = date(2026, 10, 29)
+END_DATE = date(2026, 10, 29)
 POLL_SECONDS = 15
 
 _playwright = None
@@ -165,7 +165,31 @@ def stop_recording(client, session_name):
     except Exception:
         logging.exception("Erreur pendant l'arrêt OBS.")
 
+def leave_google_meet(page):
+    """Quitte la réunion Google Meet."""
+    patterns = [
+        r"quitter l'appel",
+        r"quitter la réunion",
+        r"leave call",
+        r"leave meeting",
+    ]
 
+    for pattern in patterns:
+        try:
+            button = page.get_by_role(
+                "button",
+                name=re.compile(pattern, re.IGNORECASE),
+            ).first
+
+            if button.is_visible(timeout=1000):
+                button.click(timeout=3000)
+                logging.info("Réunion Google Meet quittée.")
+                return True
+        except Exception:
+            continue
+
+    logging.warning("Bouton pour quitter Google Meet introuvable.")
+    return False
 # ============================================================
 # PLAYWRIGHT / GOOGLE MEET
 # ============================================================
@@ -448,8 +472,16 @@ def run_scheduler(config):
 
             if session is None:
                 if recording_started and active_session is not None:
+                    # 1. Arrêter l'enregistrement OBS
                     stop_recording(client, active_session["name"])
                     recording_started = False
+
+                    # 2. Quitter Google Meet
+                    if _meet_page is not None:
+                        leave_google_meet(_meet_page)
+
+                    
+                    # 3. Réinitialiser la session active
                     active_session = None
                     active_start = None
 
@@ -513,8 +545,15 @@ def run_scheduler(config):
 
     finally:
         if recording_started and active_session is not None:
+            # Arrêter OBS avant de quitter Meet
             stop_recording(client, active_session["name"])
+            recording_started = False
 
+        # Quitter Google Meet si l'onglet existe encore
+        if _meet_page is not None:
+            leave_google_meet(_meet_page)
+
+        # Fermer le navigateur
         close_browser()
 
 
@@ -575,6 +614,9 @@ def test_now(config):
     finally:
         if recording_started:
             stop_recording(client, session["name"] + "-TEST")
+
+        if _meet_page is not None:
+            leave_google_meet(_meet_page)
 
         close_browser()
 
